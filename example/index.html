@@ -10,6 +10,9 @@
     var babsi = new Babsi({
       querySelector: 'img'
     });
+    if (!babsi.checkCompatibility()) {
+      console.log('[!] Babsi is not compatible');
+    }
   </script>
   <style>
     h1 {
@@ -21,7 +24,13 @@
       max-width: 700px;
       margin: 40px auto;
       display: block;
+      opacity: 0;
+      transition: all 0.4s ease;
     }
+      canvas.visible {
+        opacity: 1;
+      }
+
     img {
       max-width: 80%;
       height: auto;

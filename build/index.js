@@ -267,7 +267,7 @@ function _loadWasmModule (sync, src, imports) {
       }),
       table: new WebAssembly.Table({
         initial: 157,
-        maximum: 157 + 0,
+        maximum: 157,
         element: 'anyfunc'
       }),
       __assert_fail: ___assert_fail,
@@ -283,6 +283,17 @@ function _loadWasmModule (sync, src, imports) {
   var Babsi =
   /*#__PURE__*/
   function () {
+    /**
+     * 
+     * @param {*} config 
+     * 
+     * config:
+     * name: String     -     Default name, not useful at all
+     * querySelector    -     Query selector of elements, default: '.babsi'
+     * applyClass       -     Apply Class on viewport in, default: 'visible'
+     * shouldApplyClass -     Should do apply class logic?, default: true
+     * windowObject     -     window object, default: browser's window
+     */
     function Babsi(config) {
       var _this = this;
 
@@ -293,23 +304,36 @@ function _loadWasmModule (sync, src, imports) {
       this._querySelector = config.querySelector || '.babsi';
       this._applyClass = config.applyClass || 'visible';
       this._shouldApplyClass = config.shouldApplyClass || true;
-      this._wasm = wasm;
+      this._window = config.windowObject || window;
       this._currentTracked = {};
-      this.BABSIHTTP = new BabsiHttp();
+      this.addHttp();
       wasm(_objectSpread2({}, imports)).then(function (_ref) {
         var instance = _ref.instance,
             module = _ref.module;
-        _this._webP = _objectSpread2({}, instance.exports);
-        _this.BABSIIMAGE = new BabsiImage(_this._webP);
+        console.log(instance);
+        _this._webP = _objectSpread2({}, instance.exports); // Babsi-image require Wasm import
+
+        _this.addWebPDecoder(); // Init Babsi only then async wasm import
+
 
         _this.init();
       });
     }
 
     _createClass(Babsi, [{
+      key: "addWebPDecoder",
+      value: function addWebPDecoder() {
+        this.BABSIIMAGE = new BabsiImage(this._webP);
+      }
+    }, {
+      key: "addHttp",
+      value: function addHttp() {
+        this.BABSIHTTP = new BabsiHttp();
+      }
+    }, {
       key: "checkCompatibility",
-      value: function checkCompatibility(window) {
-        var ww = window;
+      value: function checkCompatibility() {
+        var ww = this._window;
 
         if (typeof ww !== 'undefined') {
           var io = typeof window.IntersectionObserver === 'undefined';
@@ -329,8 +353,7 @@ function _loadWasmModule (sync, src, imports) {
         var _this2 = this;
 
         this._observer = this.createObserver();
-        var images = document.querySelectorAll(this._querySelector); // console.log('selected:', images);
-
+        var images = document.querySelectorAll(this._querySelector);
         images.forEach(function (img) {
           _this2.prepare(img);
         });
@@ -346,34 +369,39 @@ function _loadWasmModule (sync, src, imports) {
         var _this3 = this;
 
         var that = this;
-        target.style.display = 'none';
-        var s = document.createElement('canvas');
         var randomId = this.returnRandomId();
-        s.id = randomId;
+        var canvas = document.createElement('canvas');
+        target.style.display = 'none';
+        canvas.id = randomId;
+        canvas.setAttribute('data-babsi', randomId);
         target.setAttribute('data-babsi', randomId);
-        target.insertAdjacentElement("afterend", s);
+        target.insertAdjacentElement("afterend", canvas);
         this.BABSIHTTP.addRequest(target.dataset.src, function (image) {
           var buffer = _this3.BABSIIMAGE.optimize(image, target.dataset.src);
 
           var currentImage = document.createElement('img');
           currentImage.src = buffer;
-          var canvas = document.getElementById(randomId);
           canvas.style.width = '100%';
           var ctx = canvas.getContext('2d');
 
           currentImage.onload = function () {
-            var width = currentImage.naturalWidth;
-            var height = currentImage.naturalHeight;
+            var _width$height = {
+              width: currentImage.naturalWidth,
+              height: currentImage.naturalHeight
+            },
+                width = _width$height.width,
+                height = _width$height.height;
             var canvasWidth = canvas.getBoundingClientRect().width;
             var ratioHeight = canvasWidth * height / width;
-            ctx.clearRect(0, 0, canvasWidth, ratioHeight);
+            ctx.clearRect(0, 0, canvasWidth, ratioHeight); // Fix change src future-proof
+
             canvas.width = canvasWidth;
             canvas.height = ratioHeight;
-            canvas.setAttribute('data-babsi', randomId);
 
             that._observer.observe(canvas);
 
             _this3._currentTracked[randomId] = {
+              canvas: canvas,
               ctx: ctx,
               currentImage: currentImage,
               width: canvasWidth,
@@ -390,6 +418,8 @@ function _loadWasmModule (sync, src, imports) {
           entries.forEach(function (entry) {
             if (entry.isIntersecting) {
               that.handleCallback(entry.target);
+            } else {
+              that.removeClass(entry.target);
             }
           });
         }, {
@@ -399,10 +429,23 @@ function _loadWasmModule (sync, src, imports) {
     }, {
       key: "handleCallback",
       value: function handleCallback(target) {
-        console.log(this._currentTracked);
         var id = target.dataset.babsi;
         var obj = this._currentTracked[id];
         obj.ctx.drawImage(obj.currentImage, 0, 0, obj.width, obj.height);
+
+        if (this._shouldApplyClass) {
+          obj.canvas.classList.add(this._applyClass);
+        }
+      } // To optimize, too much calls without reason
+
+    }, {
+      key: "removeClass",
+      value: function removeClass(target) {
+        if (this._shouldApplyClass) {
+          var id = target.dataset.babsi;
+          var obj = this._currentTracked[id];
+          obj.canvas.classList.remove(this._applyClass);
+        }
       }
     }]);
 
