@@ -25,7 +25,7 @@ Currently no. Not needed but in my TODO.
 | Better handle of http queue | Missing |
 |  |  |
 
-*It is included and functions is correctly working, but need a layer wrapper (cwrap) between data structure blob -> buffer uInt8 -> array uInt8, if included ( just concat at begin of bundle webp.js in lib/ ) with webp.js its already wrapped and fully working, but require external bundle global vars and browser module so i'm trying workaround.
+*It is included and functions is correctly working, working wrapper, now missing logic to covert image blob to uInt8, and decode the output in format uInt8 r1, g1, b1, a1, r2, g2, ...
 
 ## Usage
 
